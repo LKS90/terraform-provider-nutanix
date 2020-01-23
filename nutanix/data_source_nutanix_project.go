@@ -8,19 +8,19 @@ import (
 	"github.com/terraform-providers/terraform-provider-nutanix/utils"
 )
 
-func dataSourceNutanixSubnet() *schema.Resource {
+func dataSourceNutanixProject() *schema.Resource {
 	return &schema.Resource{
-		Read: dataSourceNutanixSubnetRead,
+		Read: dataSourceNutanixProjectRead,
 		Schema: map[string]*schema.Schema{
-			"subnet_id": {
+			"project_id": {
 				Type:          schema.TypeString,
 				Optional:      true,
-				ConflictsWith: []string{"subnet_name"},
+				ConflictsWith: []string{"project_name"},
 			},
-			"subnet_name": {
+			"project_name": {
 				Type:          schema.TypeString,
 				Optional:      true,
-				ConflictsWith: []string{"subnet_id"},
+				ConflictsWith: []string{"project_id"},
 			},
 			"api_version": {
 				Type:     schema.TypeString,
@@ -167,7 +167,7 @@ func dataSourceNutanixSubnet() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			"subnet_type": {
+			"project_type": {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
@@ -179,7 +179,7 @@ func dataSourceNutanixSubnet() *schema.Resource {
 				Type:     schema.TypeInt,
 				Computed: true,
 			},
-			"subnet_ip": {
+			"project_ip": {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
@@ -270,19 +270,19 @@ func dataSourceNutanixSubnet() *schema.Resource {
 	}
 }
 
-func findSubnetByUUID(conn *v3.Client, uuid string) (*v3.SubnetIntentResponse, error) {
-	return conn.V3.GetSubnet(uuid)
+func findProjectByUUID(conn *v3.Client, uuid string) (*v3.ProjectIntentResponse, error) {
+	return conn.V3.GetProject(uuid)
 }
 
-func findSubnetByName(conn *v3.Client, name string) (*v3.SubnetIntentResponse, error) {
-	resp, err := conn.V3.ListAllSubnet()
+func findProjectByName(conn *v3.Client, name string) (*v3.ProjectIntentResponse, error) {
+	resp, err := conn.V3.ListAllProject()
 	if err != nil {
 		return nil, err
 	}
 
 	entities := resp.Entities
 
-	found := make([]*v3.SubnetIntentResponse, 0)
+	found := make([]*v3.ProjectIntentResponse, 0)
 	for _, v := range entities {
 		if *v.Spec.Name == name {
 			found = append(found, v)
@@ -290,35 +290,35 @@ func findSubnetByName(conn *v3.Client, name string) (*v3.SubnetIntentResponse, e
 	}
 
 	if len(found) > 1 {
-		return nil, fmt.Errorf("your query returned more than one result. Please use subnet_id argument instead")
+		return nil, fmt.Errorf("your query returned more than one result. Please use project_id argument instead")
 	}
 
 	if len(found) == 0 {
-		return nil, fmt.Errorf("subnet with the given name, not found")
+		return nil, fmt.Errorf("project with the given name, not found")
 	}
 
 	return found[0], nil
 
 }
 
-func dataSourceNutanixSubnetRead(d *schema.ResourceData, meta interface{}) error {
+func dataSourceNutanixProjectRead(d *schema.ResourceData, meta interface{}) error {
 	// Get client connection
 	conn := meta.(*Client).API
 
-	subnetID, iok := d.GetOk("subnet_id")
-	subnetName, nok := d.GetOk("subnet_name")
+	projectID, iok := d.GetOk("project_id")
+	projectName, nok := d.GetOk("project_name")
 
 	if !iok && !nok {
-		return fmt.Errorf("please provide one of subnet_id or subnet_name attributes")
+		return fmt.Errorf("please provide one of project_id or project_name attributes")
 	}
 
 	var reqErr error
-	var resp *v3.SubnetIntentResponse
+	var resp *v3.ProjectIntentResponse
 
 	if iok {
-		resp, reqErr = findSubnetByUUID(conn, subnetID.(string))
+		resp, reqErr = findProjectByUUID(conn, projectID.(string))
 	} else {
-		resp, reqErr = findSubnetByName(conn, subnetName.(string))
+		resp, reqErr = findProjectByName(conn, projectName.(string))
 	}
 
 	if reqErr != nil {
@@ -359,7 +359,7 @@ func dataSourceNutanixSubnetRead(d *schema.ResourceData, meta interface{}) error
 	if resp.Status.Resources.IPConfig != nil {
 		dgIP = utils.StringValue(resp.Status.Resources.IPConfig.DefaultGatewayIP)
 		pl = utils.Int64Value(resp.Status.Resources.IPConfig.PrefixLength)
-		sIP = utils.StringValue(resp.Status.Resources.IPConfig.SubnetIP)
+		sIP = utils.StringValue(resp.Status.Resources.IPConfig.ProjectIP)
 
 		if resp.Status.Resources.IPConfig.DHCPServerAddress != nil {
 			dhcpSA["ip"] = utils.StringValue(resp.Status.Resources.IPConfig.DHCPServerAddress.IP)
@@ -412,10 +412,10 @@ func dataSourceNutanixSubnetRead(d *schema.ResourceData, meta interface{}) error
 	d.Set("description", utils.StringValue(resp.Status.Description))
 	d.Set("state", utils.StringValue(resp.Status.State))
 	d.Set("vswitch_name", utils.StringValue(resp.Status.Resources.VswitchName))
-	d.Set("subnet_type", utils.StringValue(resp.Status.Resources.SubnetType))
+	d.Set("project_type", utils.StringValue(resp.Status.Resources.ProjectType))
 	d.Set("default_gateway_ip", dgIP)
 	d.Set("prefix_length", pl)
-	d.Set("subnet_ip", sIP)
+	d.Set("project_ip", sIP)
 	d.Set("dhcp_server_address_port", port)
 	d.Set("vlan_id", utils.Int64Value(resp.Status.Resources.VlanID))
 	d.Set("network_function_chain_reference", flattenReferenceValues(resp.Status.Resources.NetworkFunctionChainReference))

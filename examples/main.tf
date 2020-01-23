@@ -27,13 +27,13 @@
 ###   While it may be possible to use Prism Element directly, Nutanix's
 ###   provider is not structured or tested for this. Using Prism Central will
 ###   give the broadest capabilities across the board
-/*  provider "nutanix" {
+ provider "nutanix" {
   username  = "admin"
   password  = "Nutanix/1234"
   endpoint  = "10.5.80.255"
   insecure  = true
   port      = 9440
-}  */
+} 
 
 data "nutanix_clusters" "clusters" {
 }
@@ -44,7 +44,9 @@ data "nutanix_clusters" "clusters" {
 ### TODO: Need to make clusters a data source object, such that consumers do
 ###       not need to manually provision cluster ID
 locals {
-  cluster1 = data.nutanix_clusters.clusters.entities[1].metadata.uuid
+  cluster1 = [
+		"PRISM_CENTRAL"
+	]
 }
 
 ##########################
